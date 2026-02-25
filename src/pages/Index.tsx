@@ -17,7 +17,9 @@ const Index = () => {
 
   useEffect(() => {
     let defs = getDefinitions();
-    if (defs.length === 0) {
+    // Re-seed if empty or if sample data has been updated (e.g. branches added)
+    const needsReseed = defs.length === 0 || !defs.some(d => d.lineageBranches && d.lineageBranches.length > 0);
+    if (needsReseed) {
       saveDefinitions(sampleDefinitions);
       defs = sampleDefinitions;
     }
