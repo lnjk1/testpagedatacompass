@@ -28,7 +28,7 @@ export function LineageFlow({ steps }: { steps: TransformationStep[] }) {
   }
 
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div className="flex flex-wrap items-start gap-2 pt-3 pl-3">
       {steps.map((step, i) => (
         <div key={i} className="flex items-center gap-2">
           <div
