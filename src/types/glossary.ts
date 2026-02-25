@@ -8,6 +8,11 @@ export interface TransformationStep {
   beschrijving: string;
 }
 
+export interface LineageBranch {
+  bronNaam: string;
+  stappen: TransformationStep[];
+}
+
 export interface DataDefinition {
   id: string;
   naam: string;
@@ -17,6 +22,8 @@ export interface DataDefinition {
   status: Status;
   laatstBijgewerkt: string;
   transformaties: TransformationStep[];
+  lineageBranches?: LineageBranch[];
+  mergeStappen?: TransformationStep[];
 }
 
 export const CATEGORIES: Category[] = ['Financieel', 'HR', 'Klantgegevens', 'Operations', 'IT', 'Overig'];

@@ -80,9 +80,24 @@ export const sampleDefinitions: DataDefinition[] = [
     categorie: 'Operations',
     status: 'Geaccordeerd',
     laatstBijgewerkt: '2025-09-30',
-    transformaties: [
-      { bronapplicatie: 'AFAS', stapnummer: 1, beschrijving: 'Beschikbare uren per medewerker ophalen' },
-      { bronapplicatie: 'TimeChimp', stapnummer: 2, beschrijving: 'Declarabele uren per medewerker ophalen' },
+    transformaties: [],
+    lineageBranches: [
+      {
+        bronNaam: 'AFAS',
+        stappen: [
+          { bronapplicatie: 'AFAS', stapnummer: 1, beschrijving: 'Beschikbare uren per medewerker ophalen' },
+          { bronapplicatie: 'AFAS', stapnummer: 2, beschrijving: 'Corrigeren voor parttime en verlof' },
+        ],
+      },
+      {
+        bronNaam: 'TimeChimp',
+        stappen: [
+          { bronapplicatie: 'TimeChimp', stapnummer: 1, beschrijving: 'Declarabele uren per medewerker ophalen' },
+          { bronapplicatie: 'TimeChimp', stapnummer: 2, beschrijving: 'Filteren op facturabel en goedgekeurd' },
+        ],
+      },
+    ],
+    mergeStappen: [
       { bronapplicatie: 'Data Warehouse', stapnummer: 3, beschrijving: 'Bezettingsgraad = declarabele uren / beschikbare uren × 100%' },
       { bronapplicatie: 'Power BI', stapnummer: 4, beschrijving: 'Per team en individueel met target (75%)' },
     ],

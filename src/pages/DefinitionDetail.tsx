@@ -112,7 +112,7 @@ const DefinitionDetail = () => {
             </p>
           </CardHeader>
           <CardContent className="overflow-x-auto pb-6">
-            <LineageFlow steps={definition.transformaties} />
+            <LineageFlow steps={definition.transformaties} branches={definition.lineageBranches} mergeStappen={definition.mergeStappen} />
           </CardContent>
         </Card>
       </main>
