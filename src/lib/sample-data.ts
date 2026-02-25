@@ -45,6 +45,42 @@ export const sampleDefinitions: DataDefinition[] = [
     ],
   },
   {
+    id: '7',
+    naam: 'Winstgevendheid per klant',
+    beschrijving: 'Nettomarge per klant, berekend uit omzet, directe kosten en tijdsbesteding.',
+    eigenaar: 'Finance - Jan de Vries',
+    categorie: 'Financieel',
+    status: 'In review',
+    laatstBijgewerkt: '2026-02-10',
+    transformaties: [],
+    lineageBranches: [
+      {
+        bronNaam: 'Exact Online',
+        stappen: [
+          { bronapplicatie: 'Exact Online', stapnummer: 1, beschrijving: 'Omzet per klant ophalen uit facturen' },
+          { bronapplicatie: 'Exact Online', stapnummer: 2, beschrijving: 'Inkoopkosten koppelen aan klantprojecten' },
+        ],
+      },
+      {
+        bronNaam: 'TimeChimp',
+        stappen: [
+          { bronapplicatie: 'TimeChimp', stapnummer: 1, beschrijving: 'Bestede uren per klant ophalen' },
+          { bronapplicatie: 'TimeChimp', stapnummer: 2, beschrijving: 'Vermenigvuldigen met intern uurtarief' },
+        ],
+      },
+      {
+        bronNaam: 'Salesforce',
+        stappen: [
+          { bronapplicatie: 'Salesforce', stapnummer: 1, beschrijving: 'Klantgegevens en contracttype ophalen' },
+        ],
+      },
+    ],
+    mergeStappen: [
+      { bronapplicatie: 'Data Warehouse', stapnummer: 3, beschrijving: 'Nettomarge = omzet - kosten - tijdsbesteding per klant' },
+      { bronapplicatie: 'Power BI', stapnummer: 4, beschrijving: 'Ranking en trendanalyse per klantsegment' },
+    ],
+  },
+  {
     id: '4',
     naam: 'Ziekteverzuimpercentage',
     beschrijving: 'Het percentage van de totale beschikbare werkdagen dat verloren gaat door ziekte.',
