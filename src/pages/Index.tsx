@@ -21,7 +21,10 @@ const Index = () => {
     if (DEFINITIONS_URL) {
       fetch(DEFINITIONS_URL)
         .then((res) => res.json())
-        .then((data: DataDefinition[]) => setDefinitions(data))
+        .then((data: DataDefinition[]) => {
+        saveDefinitions(data);
+        setDefinitions(data);
+      })
         .catch(() => setDefinitions([]));
       return;
     }
