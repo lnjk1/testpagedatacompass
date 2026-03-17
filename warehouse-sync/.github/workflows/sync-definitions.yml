@@ -1,13 +1,13 @@
 name: Sync SQL Definitions
 
 # Triggers on every push to main that touches at least one .md file
-# inside the warehouse/ folder.
+# inside the Warehouses/ folder.
 on:
   push:
     branches:
       - main
     paths:
-      - 'warehouse/**/*.md'
+      - 'Warehouses/**/*.md'
 
 jobs:
   sync:
@@ -34,9 +34,9 @@ jobs:
         id: changed
         run: |
           UPSERT=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD \
-            | grep '^warehouse/.*\.md$' || true)
+            | grep '^Warehouses/.*\.md$' || true)
           DELETED=$(git diff --name-only --diff-filter=D  HEAD~1 HEAD \
-            | grep '^warehouse/.*\.md$' || true)
+            | grep '^Warehouses/.*\.md$' || true)
 
           # Write to GITHUB_OUTPUT (space-separated on a single line)
           echo "UPSERT_FILES=$(echo $UPSERT | tr '\n' ' ')"   >> $GITHUB_OUTPUT
