@@ -1,0 +1,70 @@
+name: Sync SQL Definitions
+
+# Triggers on every push to main that touches at least one .md file
+# inside the warehouse/ folder.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'warehouse/**/*.md'
+
+jobs:
+  sync:
+    name: Push definitions to Data Compass
+    runs-on: ubuntu-latest
+
+    env:
+      API_BASE_URL:     ${{ secrets.API_BASE_URL }}
+      WEBHOOK_API_KEY:  ${{ secrets.WEBHOOK_API_KEY }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout with enough history to detect the diff
+      # -----------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # need HEAD~1 to compute the file diff
+
+      # -----------------------------------------------------------------------
+      # 2. Detect which .md files were added/modified vs. deleted
+      # -----------------------------------------------------------------------
+      - name: Detect changed markdown files
+        id: changed
+        run: |
+          UPSERT=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD \
+            | grep '^warehouse/.*\.md$' || true)
+          DELETED=$(git diff --name-only --diff-filter=D  HEAD~1 HEAD \
+            | grep '^warehouse/.*\.md$' || true)
+
+          # Write to GITHUB_OUTPUT (space-separated on a single line)
+          echo "UPSERT_FILES=$(echo $UPSERT | tr '\n' ' ')"   >> $GITHUB_OUTPUT
+          echo "DELETED_FILES=$(echo $DELETED | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+          echo "Upsert:  $UPSERT"
+          echo "Deleted: $DELETED"
+
+      # -----------------------------------------------------------------------
+      # 3. Upsert changed/added definitions
+      # -----------------------------------------------------------------------
+      - name: Upsert changed definitions
+        if: steps.changed.outputs.UPSERT_FILES != ''
+        run: |
+          python3 .github/scripts/sync_definitions.py \
+            --action upsert \
+            --files ${{ steps.changed.outputs.UPSERT_FILES }} \
+            --api-url "$API_BASE_URL" \
+            --api-key "$WEBHOOK_API_KEY"
+
+      # -----------------------------------------------------------------------
+      # 4. Soft-delete removed definitions
+      # -----------------------------------------------------------------------
+      - name: Soft-delete removed definitions
+        if: steps.changed.outputs.DELETED_FILES != ''
+        run: |
+          python3 .github/scripts/sync_definitions.py \
+            --action delete \
+            --files ${{ steps.changed.outputs.DELETED_FILES }} \
+            --api-url "$API_BASE_URL" \
+            --api-key "$WEBHOOK_API_KEY"

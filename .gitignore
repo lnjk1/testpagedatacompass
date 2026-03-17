@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# API server runtime data (generated at runtime, not committed)
+data/definitions.json
+
+# Environment variables
+.env
+.env.local
