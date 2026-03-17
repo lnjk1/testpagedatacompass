@@ -1,64 +1,34 @@
 # Definition Sync Setup
 
-This document describes how to connect the warehouse repo's GitHub Actions pipeline to the Data Compass API server.
+This document describes how to connect the warehouse repo's GitHub Actions pipeline to Data Compass. No server required — the pipeline commits `definitions.json` directly into the warehouse repo, and Data Compass fetches it via a raw GitHub URL.
 
 ---
 
 ## How it works
 
 ```
-warehouse repo                        data-compass server
-──────────────                        ───────────────────
-.md file merged to main
+warehouse repo                          Data Compass (GitHub Pages)
+──────────────                          ───────────────────────────
+Warehouses/<db>/<schema>/Views/*.md
         │
         ▼
-GitHub Actions detects changed files
+GitHub Actions detects changed .md files
         │
         ▼
-sync_definitions.py parses .md  ──►  POST /api/definitions/:schema/:viewname
-                                              │
-                                              ▼
-                                       data/definitions.json
+sync_definitions.py parses .md files
+        │
+        ▼
+definitions.json committed back
+to warehouse repo
+        │
+        ▼ (raw GitHub URL)
+Data Compass fetches definitions.json
+on page load
 ```
 
 ---
 
-## 1. Configure the data-compass server
-
-Copy `.env.example` to `.env` and fill in a secret key of your choice:
-
-```
-WEBHOOK_API_KEY=your-secret-here
-PORT=3001
-```
-
-Start the server:
-
-```sh
-# Development (with auto-reload)
-npm run server:dev
-
-# Or run frontend + API together
-npm run dev:full
-```
-
-The API will be available at `http://localhost:3001`.
-
----
-
-## 2. Configure the warehouse repo
-
-Add two secrets in the warehouse repo:
-**GitHub → Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret name | Value |
-|---|---|
-| `API_BASE_URL` | Full URL of the data-compass server, e.g. `http://localhost:3001` for local testing or `https://your-server.example.com` in production |
-| `WEBHOOK_API_KEY` | The same value you set in data-compass `.env` |
-
----
-
-## 3. Copy pipeline files into the warehouse repo
+## 1. Copy pipeline files into the warehouse repo
 
 From `warehouse-sync/` in this repo, copy the following files to the warehouse repo:
 
@@ -71,34 +41,73 @@ warehouse-sync/
     contributing-definitions.md      →  docs/contributing-definitions.md
 ```
 
----
+Also create an empty `definitions.json` in the root of the warehouse repo:
 
-## 4. Test locally
-
-With the server running (`npm run server:dev`), you can test a manual upsert:
-
-```sh
-curl -X POST http://localhost:3001/api/definitions/bus_bereken/netto_omzet \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-here" \
-  -d '{
-    "naam": "netto_omzet",
-    "beschrijving": "Test definitie",
-    "eigenaar": "Finance - Jan de Vries",
-    "categorie": "Financieel",
-    "status": "Concept",
-    "laatstBijgewerkt": "2026-03-17",
-    "transformaties": []
-  }'
+```json
+[]
 ```
 
-Check the result in `data/definitions.json`.
+Commit and push both.
 
 ---
 
-## 5. Verify the pipeline
+## 2. Set VITE_DEFINITIONS_URL in Data Compass
 
-Push a change to any `warehouse/**/*.md` file on the `main` branch of the warehouse repo and check the **Actions** tab to confirm the workflow ran successfully.
+The app needs to know where to fetch `definitions.json`. Set this as a repository variable in the **data-compass** GitHub repo:
+
+- Go to **Settings → Secrets and variables → Actions → Variables tab**
+- Create variable: `VITE_DEFINITIONS_URL`
+- Value: raw GitHub URL to `definitions.json` in the warehouse repo:
+
+```
+https://raw.githubusercontent.com/<org>/<warehouse-repo>/main/definitions.json
+```
+
+The next deploy of Data Compass will pick this up automatically.
+
+---
+
+## 3. How .md files are structured
+
+Each view definition lives at:
+
+```
+Warehouses/<database>/<schema>/Views/<viewname>.md
+```
+
+The file must start with a YAML frontmatter block:
+
+```markdown
+---
+eigenaar: "Finance - Tom van Berg"
+categorie: "Financieel"
+status: "Geaccordeerd"
+---
+
+The rest of the file is the description shown in Data Compass.
+```
+
+Valid values:
+- `categorie`: `Financieel`, `HR`, `Klantgegevens`, `Operations`, `IT`, `Overig`
+- `status`: `Geaccordeerd`, `In review`, `Concept`
+
+---
+
+## 4. Trigger a sync
+
+Push any change to a `.md` file under `Warehouses/` on the `main` branch of the warehouse repo. The workflow will:
+
+1. Detect which files were added, modified, or deleted
+2. Update `definitions.json` accordingly
+3. Commit `definitions.json` back to the repo with `[skip ci]`
+
+Check the **Actions** tab in the warehouse repo to confirm it ran successfully.
+
+---
+
+## 5. Verify in Data Compass
+
+Open Data Compass — it fetches `definitions.json` fresh on every page load. New or updated definitions appear immediately.
 
 ---
 
@@ -109,8 +118,8 @@ When moving to Azure DevOps, only the workflow file changes:
 | GitHub | Azure DevOps |
 |---|---|
 | `.github/workflows/sync-definitions.yml` | `.azure-pipelines/sync-definitions.yml` |
-| `secrets.API_BASE_URL` | Variable Group → `API_BASE_URL` |
-| `secrets.WEBHOOK_API_KEY` | Variable Group → `WEBHOOK_API_KEY` |
 | `on: push branches: [main]` | `trigger: branches: include: [main]` |
+| `actions/checkout@v4` | `checkout: self` |
+| `git push` | `git push` (same, using pipeline identity) |
 
-The server, Python script, and `.md` format require no changes.
+The Python script, `.md` format, and `definitions.json` structure require no changes.

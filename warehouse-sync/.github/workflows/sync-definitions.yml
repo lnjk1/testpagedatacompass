@@ -37,8 +37,8 @@ jobs:
           DELETED=$(git diff --name-only --diff-filter=D  HEAD~1 HEAD \
             | grep '^Warehouses/.*\.md$' || true)
 
-          echo "UPSERT_FILES=$(echo $UPSERT | tr '\n' ' ')"   >> $GITHUB_OUTPUT
-          echo "DELETED_FILES=$(echo $DELETED | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          echo "UPSERT_FILES=$(echo $UPSERT | tr '\n' ' ' | xargs)"   >> $GITHUB_OUTPUT
+          echo "DELETED_FILES=$(echo $DELETED | tr '\n' ' ' | xargs)" >> $GITHUB_OUTPUT
 
           echo "Upsert:  $UPSERT"
           echo "Deleted: $DELETED"
