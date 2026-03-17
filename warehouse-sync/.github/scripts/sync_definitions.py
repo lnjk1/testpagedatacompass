@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """
-sync_definitions.py — Sync warehouse .md definitions to the Data Compass API.
+sync_definitions.py — Sync warehouse .md definitions into definitions.json.
 
 Usage:
-    python3 sync_definitions.py --action upsert --files path/to/view.md [...]
-                                --api-url https://your-server.example.com
-                                --api-key YOUR_SECRET_KEY
+    python3 sync_definitions.py --action upsert --files path/to/view.md [...] \
+                                --definitions-file definitions.json
 
-    python3 sync_definitions.py --action delete --files path/to/view.md [...]
-                                --api-url https://your-server.example.com
-                                --api-key YOUR_SECRET_KEY
+    python3 sync_definitions.py --action delete --files path/to/view.md [...] \
+                                --definitions-file definitions.json
 
 Path convention:
-    warehouse/<schema>/Views/<viewname>.md
-    -> schema   = <schema>  (e.g. bus_bereken)
+    Warehouses/<db>/<schema>/Views/<viewname>.md
+    -> schema   = <schema>  (directory directly above Views/)
     -> viewname = <viewname> (filename without .md extension)
 """
 
@@ -21,8 +19,7 @@ import argparse
 import json
 import re
 import sys
-import urllib.error
-import urllib.request
+import uuid
 from datetime import date
 from pathlib import Path
 
@@ -39,11 +36,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 def path_to_parts(filepath: str) -> tuple[str, str]:
-    """Extract (schema, viewname) from warehouse/<schema>/Views/<viewname>.md"""
+    """Extract (schema, viewname) from .../<schema>/Views/<viewname>.md"""
     p = Path(filepath)
-    viewname = p.stem  # filename without extension
+    viewname = p.stem
     parts = p.parts
-    # Find the 'Views' directory in the path
     views_idx = next(
         (i for i, part in enumerate(parts) if part.lower() == 'views'),
         None
@@ -51,7 +47,7 @@ def path_to_parts(filepath: str) -> tuple[str, str]:
     if views_idx is None or views_idx < 1:
         raise ValueError(
             f"Cannot extract schema from path '{filepath}'. "
-            "Expected pattern: warehouse/<schema>/Views/<viewname>.md"
+            "Expected pattern: .../<schema>/Views/<viewname>.md"
         )
     schema = parts[views_idx - 1]
     return schema, viewname
@@ -72,12 +68,8 @@ def parse_md(path: Path) -> dict:
         status: "Concept"
         ---
         The rest of the file is the technical definition (beschrijving).
-
-    Returns a dict matching (a subset of) the DataDefinition interface.
     """
     text = path.read_text(encoding='utf-8')
-
-    # Split on YAML frontmatter delimiters
     fm_match = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n?(.*)', text, re.DOTALL)
     if not fm_match:
         raise ValueError(
@@ -87,7 +79,6 @@ def parse_md(path: Path) -> dict:
 
     frontmatter_text = fm_match.group(1)
     body = fm_match.group(2).strip()
-
     front = yaml.safe_load(frontmatter_text) or {}
 
     return {
@@ -111,44 +102,49 @@ def read_sql(md_path: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
-# API calls
+# definitions.json helpers
 # ---------------------------------------------------------------------------
 
-def api_upsert(base_url: str, api_key: str, schema: str, viewname: str, payload: dict) -> dict:
-    url = f"{base_url.rstrip('/')}/api/definitions/{schema}/{viewname}"
-    data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(
-        url,
-        data=data,
-        method='POST',
-        headers={
-            'Content-Type': 'application/json',
-            'X-API-Key':    api_key,
-        },
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode('utf-8', errors='replace')
-        raise RuntimeError(f"HTTP {e.code} from {url}: {body}") from e
+def load_definitions(definitions_file: Path) -> list:
+    if definitions_file.exists():
+        text = definitions_file.read_text(encoding='utf-8').strip()
+        if text:
+            return json.loads(text)
+    return []
 
 
-def api_delete(base_url: str, api_key: str, schema: str, viewname: str) -> dict:
-    url = f"{base_url.rstrip('/')}/api/definitions/{schema}/{viewname}"
-    req = urllib.request.Request(
-        url,
-        method='DELETE',
-        headers={'X-API-Key': api_key},
+def save_definitions(definitions_file: Path, definitions: list) -> None:
+    definitions_file.write_text(
+        json.dumps(sorted(definitions, key=lambda d: d.get('naam', '').lower()), indent=2, ensure_ascii=False),
+        encoding='utf-8'
     )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return {'action': 'not-found', 'viewname': viewname}
-        body = e.read().decode('utf-8', errors='replace')
-        raise RuntimeError(f"HTTP {e.code} from {url}: {body}") from e
+
+
+def upsert_definition(definitions: list, entry: dict) -> str:
+    """Name-based upsert. Returns 'created' or 'updated'."""
+    key = entry['naam'].lower()
+    for i, existing in enumerate(definitions):
+        if existing.get('naam', '').lower() == key:
+            # Preserve id; merge everything else
+            definitions[i] = {**existing, **entry, 'id': existing['id']}
+            # Clear soft-delete flag if re-added
+            definitions[i].pop('_deleted', None)
+            return 'updated'
+    # New entry — generate a UUID
+    entry['id'] = str(uuid.uuid4())
+    definitions.append(entry)
+    return 'created'
+
+
+def soft_delete_definition(definitions: list, naam: str) -> str:
+    """Soft-delete: set status → Concept, flag _deleted. Returns 'deleted' or 'not-found'."""
+    key = naam.lower()
+    for entry in definitions:
+        if entry.get('naam', '').lower() == key:
+            entry['status'] = 'Concept'
+            entry['_deleted'] = True
+            return 'deleted'
+    return 'not-found'
 
 
 # ---------------------------------------------------------------------------
@@ -156,13 +152,15 @@ def api_delete(base_url: str, api_key: str, schema: str, viewname: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description='Sync warehouse definitions to Data Compass')
-    parser.add_argument('--action',  required=True, choices=['upsert', 'delete'])
-    parser.add_argument('--files',   required=True, nargs='+', help='.md file paths')
-    parser.add_argument('--api-url', required=True, help='Base URL of the Data Compass server')
-    parser.add_argument('--api-key', required=True, help='WEBHOOK_API_KEY secret')
+    parser = argparse.ArgumentParser(description='Sync warehouse definitions to definitions.json')
+    parser.add_argument('--action',           required=True, choices=['upsert', 'delete'])
+    parser.add_argument('--files',            required=True, nargs='+', help='.md file paths')
+    parser.add_argument('--definitions-file', default='definitions.json',
+                        help='Path to definitions.json (default: definitions.json)')
     args = parser.parse_args()
 
+    definitions_file = Path(args.definitions_file)
+    definitions = load_definitions(definitions_file)
     errors = []
 
     for filepath in args.files:
@@ -182,22 +180,25 @@ def main():
                 payload['schema']     = schema
                 payload['sqlContent'] = read_sql(md_path)
 
-                result = api_upsert(args.api_url, args.api_key, schema, viewname, payload)
-                print(f"  [upsert] {schema}/{viewname} → {result.get('action', '?')} (id: {result.get('id', '?')})")
+                action = upsert_definition(definitions, payload)
+                print(f"  [upsert] {schema}/{viewname} → {action}")
 
             else:  # delete
-                result = api_delete(args.api_url, args.api_key, schema, viewname)
-                print(f"  [delete] {schema}/{viewname} → {result.get('action', '?')}")
+                action = soft_delete_definition(definitions, viewname)
+                print(f"  [delete] {schema}/{viewname} → {action}")
 
         except Exception as exc:
             print(f"  ERROR  {filepath}: {exc}", file=sys.stderr)
             errors.append(filepath)
+
+    save_definitions(definitions_file, definitions)
 
     if errors:
         print(f"\n{len(errors)} file(s) failed. See errors above.", file=sys.stderr)
         sys.exit(1)
 
     print(f"\nDone. {len(args.files) - len(errors)}/{len(args.files)} file(s) synced successfully.")
+    print(f"definitions.json updated ({len(definitions)} total entries).")
 
 
 if __name__ == '__main__':

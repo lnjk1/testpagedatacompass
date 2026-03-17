@@ -10,14 +10,23 @@ import { DataDefinition, CATEGORIES, Category } from '@/types/glossary';
 import { getDefinitions, saveDefinitions } from '@/lib/glossary-store';
 import { sampleDefinitions } from '@/lib/sample-data';
 
+const DEFINITIONS_URL = import.meta.env.VITE_DEFINITIONS_URL as string | undefined;
+
 const Index = () => {
   const [definitions, setDefinitions] = useState<DataDefinition[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
 
   useEffect(() => {
+    if (DEFINITIONS_URL) {
+      fetch(DEFINITIONS_URL)
+        .then((res) => res.json())
+        .then((data: DataDefinition[]) => setDefinitions(data))
+        .catch(() => setDefinitions([]));
+      return;
+    }
+    // Local fallback: localStorage with sample data seeding
     let defs = getDefinitions();
-    // Re-seed if empty or if sample data has been updated (e.g. branches added)
     const needsReseed = defs.length === 0 || defs.length < sampleDefinitions.length;
     if (needsReseed) {
       saveDefinitions(sampleDefinitions);
