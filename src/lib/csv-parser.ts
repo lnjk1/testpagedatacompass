@@ -195,31 +195,31 @@ export function generateTemplate(): void {
     'Bronapplicatie_3', 'Transformatie_3',
   ];
   const linearExample = [
-    'Omzet', 'Totale inkomsten uit verkoop', 'Finance - Jan', 'Financieel', 'Geaccordeerd', '2025-12-15',
+    'Productie-output', 'Totaal geproduceerde eenheden per periode', 'Finance - Tom', 'Financieel', 'Geaccordeerd', '2025-12-15',
     '',
-    'Exact Online', 'Factuurregels ophalen',
-    'Data Warehouse', 'Aggregatie per maand',
-    'Power BI', 'Weergave met vergelijking',
+    'SystemX', 'Productieorders ophalen',
+    'DataBridge', 'Aggregatie per week',
+    'InsightBoard', 'Weergave met vergelijking',
   ];
   const branchA = [
-    'Bezettingsgraad', 'Percentage declarabele capaciteit', 'Operations - Petra', 'Operations', 'Geaccordeerd', '2025-09-30',
+    'Capaciteitsbenutting', 'Percentage factureerbare capaciteit', 'Operations - Anna', 'Operations', 'Geaccordeerd', '2025-09-30',
     'A',
-    'AFAS', 'Beschikbare uren ophalen',
-    'AFAS', 'Corrigeren voor parttime',
+    'PlannerPro', 'Beschikbare uren ophalen',
+    'PlannerPro', 'Corrigeren voor deeltijd',
     '', '',
   ];
   const branchB = [
-    'Bezettingsgraad', '', '', '', '', '',
+    'Capaciteitsbenutting', '', '', '', '', '',
     'B',
-    'TimeChimp', 'Declarabele uren ophalen',
-    'TimeChimp', 'Filteren op facturabel',
+    'TimeTrack', 'Factureerbare uren ophalen',
+    'TimeTrack', 'Filteren op goedgekeurde uren',
     '', '',
   ];
   const mergeRow = [
-    'Bezettingsgraad', '', '', '', '', '',
+    'Capaciteitsbenutting', '', '', '', '', '',
     'Merge',
-    'Data Warehouse', 'Bezettingsgraad berekenen',
-    'Power BI', 'Weergave per team',
+    'DataBridge', 'Capaciteitsbenutting berekenen',
+    'InsightBoard', 'Weergave per afdeling',
     '', '',
   ];
   const ws = XLSX.utils.aoa_to_sheet([headers, linearExample, branchA, branchB, mergeRow]);

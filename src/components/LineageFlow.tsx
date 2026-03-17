@@ -2,12 +2,12 @@ import { TransformationStep, LineageBranch } from '@/types/glossary';
 import { ArrowRight, Database, BarChart3, Server, Globe, GitMerge } from 'lucide-react';
 
 const APP_ICONS: Record<string, React.ReactNode> = {
-  'exact online': <Database className="h-5 w-5" />,
-  'afas': <Server className="h-5 w-5" />,
-  'power bi': <BarChart3 className="h-5 w-5" />,
-  'data warehouse': <Database className="h-5 w-5" />,
-  'surveymonkey': <Globe className="h-5 w-5" />,
-  'timechimp': <Globe className="h-5 w-5" />,
+  'systemx': <Database className="h-5 w-5" />,
+  'plannerpro': <Server className="h-5 w-5" />,
+  'insightboard': <BarChart3 className="h-5 w-5" />,
+  'databridge': <Database className="h-5 w-5" />,
+  'surveytool': <Globe className="h-5 w-5" />,
+  'timetrack': <Globe className="h-5 w-5" />,
 };
 
 function getIcon(app: string) {
