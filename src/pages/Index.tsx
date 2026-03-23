@@ -10,32 +10,31 @@ import { DataDefinition, CATEGORIES, Category } from '@/types/glossary';
 import { getDefinitions, saveDefinitions } from '@/lib/glossary-store';
 import { sampleDefinitions } from '@/lib/sample-data';
 
-const DEFINITIONS_URL = import.meta.env.VITE_DEFINITIONS_URL as string | undefined;
-
 const Index = () => {
   const [definitions, setDefinitions] = useState<DataDefinition[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    if (DEFINITIONS_URL) {
-      fetch(DEFINITIONS_URL)
-        .then((res) => res.json())
-        .then((data: DataDefinition[]) => {
+    const definitionsUrl = `${import.meta.env.BASE_URL}definitions.json`;
+    fetch(definitionsUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error('not found');
+        return res.json();
+      })
+      .then((data: DataDefinition[]) => {
         saveDefinitions(data);
         setDefinitions(data);
       })
-        .catch(() => setDefinitions([]));
-      return;
-    }
-    // Local fallback: localStorage with sample data seeding
-    let defs = getDefinitions();
-    const needsReseed = defs.length === 0 || defs.length < sampleDefinitions.length;
-    if (needsReseed) {
-      saveDefinitions(sampleDefinitions);
-      defs = sampleDefinitions;
-    }
-    setDefinitions(defs);
+      .catch(() => {
+        let defs = getDefinitions();
+        const needsReseed = defs.length === 0 || defs.length < sampleDefinitions.length;
+        if (needsReseed) {
+          saveDefinitions(sampleDefinitions);
+          defs = sampleDefinitions;
+        }
+        setDefinitions(defs);
+      });
   }, []);
 
   const toggleCategory = (cat: Category) => {

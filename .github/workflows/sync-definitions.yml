@@ -10,11 +10,11 @@ on:
       - 'Warehouses/**/*.md'
 
 permissions:
-  contents: write   # needed to commit definitions.json back to the repo
+  contents: write   # needed to commit public/definitions.json back to the repo
 
 jobs:
   sync:
-    name: Sync definitions to definitions.json
+    name: Sync definitions to public/definitions.json
     runs-on: ubuntu-latest
 
     steps:
@@ -52,7 +52,7 @@ jobs:
           python3 .github/scripts/sync_definitions.py \
             --action upsert \
             --files ${{ steps.changed.outputs.UPSERT_FILES }} \
-            --definitions-file definitions.json
+            --definitions-file public/definitions.json
 
       # -----------------------------------------------------------------------
       # 4. Soft-delete removed definitions
@@ -63,15 +63,16 @@ jobs:
           python3 .github/scripts/sync_definitions.py \
             --action delete \
             --files ${{ steps.changed.outputs.DELETED_FILES }} \
-            --definitions-file definitions.json
+            --definitions-file public/definitions.json
 
       # -----------------------------------------------------------------------
-      # 5. Commit updated definitions.json back to the repo
+      # 5. Commit updated public/definitions.json back to the repo
+      #    (no [skip ci] — this commit intentionally triggers a redeploy)
       # -----------------------------------------------------------------------
       - name: Commit updated definitions
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add definitions.json
-          git diff --cached --quiet || git commit -m "chore: sync definitions [skip ci]"
+          git add public/definitions.json
+          git diff --cached --quiet || git commit -m "chore: sync definitions"
           git push

@@ -1,73 +1,37 @@
 # Definition Sync Setup
 
-This document describes how to connect the warehouse repo's GitHub Actions pipeline to Data Compass. No server required — the pipeline commits `definitions.json` directly into the warehouse repo, and Data Compass fetches it via a raw GitHub URL.
+The warehouse definitions live in this repo alongside the web app. The sync pipeline automatically generates `public/definitions.json` whenever `.md` files under `Warehouses/` are changed.
 
 ---
 
 ## How it works
 
 ```
-warehouse repo                          Data Compass (GitHub Pages)
-──────────────                          ───────────────────────────
+data-compass-1 (this repo)
+──────────────────────────
 Warehouses/<db>/<schema>/Views/*.md
         │
         ▼
 GitHub Actions detects changed .md files
+(.github/workflows/sync-definitions.yml)
         │
         ▼
 sync_definitions.py parses .md files
+(.github/scripts/sync_definitions.py)
         │
         ▼
-definitions.json committed back
-to warehouse repo
+public/definitions.json committed back
         │
-        ▼ (raw GitHub URL)
-Data Compass fetches definitions.json
-on page load
+        ▼ (triggers deploy.yml)
+Vite builds app (copies public/ into dist/)
+        │
+        ▼
+GitHub Pages serves updated definitions
 ```
 
 ---
 
-## 1. Copy pipeline files into the warehouse repo
-
-From `warehouse-sync/` in this repo, copy the following files to the warehouse repo:
-
-```
-warehouse-sync/
-  .github/
-    workflows/sync-definitions.yml   →  .github/workflows/sync-definitions.yml
-    scripts/sync_definitions.py      →  .github/scripts/sync_definitions.py
-  docs/
-    contributing-definitions.md      →  docs/contributing-definitions.md
-```
-
-Also create an empty `definitions.json` in the root of the warehouse repo:
-
-```json
-[]
-```
-
-Commit and push both.
-
----
-
-## 2. Set VITE_DEFINITIONS_URL in Data Compass
-
-The app needs to know where to fetch `definitions.json`. Set this as a repository variable in the **data-compass** GitHub repo:
-
-- Go to **Settings → Secrets and variables → Actions → Variables tab**
-- Create variable: `VITE_DEFINITIONS_URL`
-- Value: raw GitHub URL to `definitions.json` in the warehouse repo:
-
-```
-https://raw.githubusercontent.com/<org>/<warehouse-repo>/main/definitions.json
-```
-
-The next deploy of Data Compass will pick this up automatically.
-
----
-
-## 3. How .md files are structured
+## How .md files are structured
 
 Each view definition lives at:
 
@@ -87,27 +51,29 @@ status: "Geaccordeerd"
 The rest of the file is the description shown in Data Compass.
 ```
 
+An optional paired `.sql` file with the same name can be placed in the same directory — its content will be shown in the SQL tab.
+
 Valid values:
 - `categorie`: `Financieel`, `HR`, `Klantgegevens`, `Operations`, `IT`, `Overig`
 - `status`: `Geaccordeerd`, `In review`, `Concept`
 
 ---
 
-## 4. Trigger a sync
+## Triggering a sync
 
-Push any change to a `.md` file under `Warehouses/` on the `main` branch of the warehouse repo. The workflow will:
+Push any change to a `.md` file under `Warehouses/` on the `main` branch. The workflow will:
 
 1. Detect which files were added, modified, or deleted
-2. Update `definitions.json` accordingly
-3. Commit `definitions.json` back to the repo with `[skip ci]`
+2. Update `public/definitions.json` accordingly
+3. Commit `public/definitions.json` back (this triggers a redeploy automatically)
 
-Check the **Actions** tab in the warehouse repo to confirm it ran successfully.
+Check the **Actions** tab to confirm both the sync and deploy workflows ran successfully.
 
 ---
 
-## 5. Verify in Data Compass
+## Verify in Data Compass
 
-Open Data Compass — it fetches `definitions.json` fresh on every page load. New or updated definitions appear immediately.
+Open Data Compass — it fetches `definitions.json` fresh on every page load from `<base>/definitions.json`. New or updated definitions appear immediately after the deploy completes.
 
 ---
 
