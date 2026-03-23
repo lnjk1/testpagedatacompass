@@ -1,11 +1,7 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'Warehouses/**'
-  workflow_dispatch:
+  workflow_dispatch: # disabled — Azure SWA handles deploys via azure-deploy.yml
 
 jobs:
   deploy:
