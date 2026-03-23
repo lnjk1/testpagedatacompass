@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write   # needed to commit public/definitions.json back to the repo
+  actions: write    # needed to trigger the deploy workflow
 
 jobs:
   sync:
@@ -76,3 +77,11 @@ jobs:
           git add public/definitions.json
           git diff --cached --quiet || git commit -m "chore: sync definitions"
           git push
+
+      # -----------------------------------------------------------------------
+      # 6. Trigger deploy workflow via API (bot commits don't trigger workflows)
+      # -----------------------------------------------------------------------
+      - name: Trigger deploy
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
