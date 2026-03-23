@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "beschrijving": "Berekend nettobedrag na aftrek van kortingen en BTW, per maand en entiteit.\n\nGebaseerd op factuurregels uit Exact Online, grootboekrekeningen 8000-8999.\nCreditnota's worden uitgesloten. Vergelijking met vorig jaar wordt berekend\nin de rapportagelaag (Power BI). Test1",
+    "eigenaar": "Finance - Jan de Vries",
+    "categorie": "Financieel",
+    "status": "Concept",
+    "laatstBijgewerkt": "2026-03-23",
+    "transformaties": [],
+    "lineageBranches": null,
+    "mergeStappen": null,
+    "naam": "casewaresherlock_document",
+    "schema": "bus_hernoem",
+    "sqlContent": "---\neigenaar: \"Finance - Boris\"\ncategorie: \"Financieel\"\nstatus: \"Geaccordeerd\"\n---\n\nThe rest of the file is the description shown in Data Compass\n",
+    "id": "7c14257f-8237-45fc-9076-fa3763dedf40"
+  }
+]
